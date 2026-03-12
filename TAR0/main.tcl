@@ -11,48 +11,54 @@ proc handleAdd {outFile} {
     puts $outFile "command: add"
 }
 
-proc handleSub {outChannel} {
-    puts $outChannel "command: sub"
+proc handleSub {outFile} {
+    puts $outFile "command: sub"
 }
 
-proc handleNeg {outChannel} {
-    puts $outChannel "command: neg"
+proc handleNeg {outFile} {
+    puts $outFile "command: neg"
 }
 
-# Logical commands include a counter 
-proc handleEq {outChannel counterVar} {
-    upvar $counterVar c
-    puts $outChannel "command: eq"
-    puts $outChannel "counter: $c"
-    set c [expr $c + 1]
+# ==========================================
+# פונקציות עזר - פקודות לוגיות
+# ==========================================
+proc handleEq {outFile counterVarName} {
+    upvar 1 $counterVarName count
+    incr count
+    puts $outFile "command: eq"
+    puts $outFile "counter: $count"
 }
 
-proc handleGt {outChannel counterVar} {
-    upvar $counterVar c
-    puts $outChannel "command: gt"
-    puts $outChannel "counter: $c"
-    set c [expr $c + 1]
+proc handleGt {outFile counterVarName} {
+    upvar 1 $counterVarName count
+    incr count
+    puts $outFile "command: gt"
+    puts $outFile "counter: $count"
 }
 
-proc handleLt {outChannel counterVar} {
-    upvar $counterVar c
-    puts $outChannel "command: lt"
-    puts $outChannel "counter: $c"
-    set c [expr $c + 1]
+proc handleLt {outFile counterVarName} {
+    upvar 1 $counterVarName count
+    incr count
+    puts $outFile "command: lt"
+    puts $outFile "counter: $count"
 }
 
-# Memory access commands with parameters 
-proc handlePush {outChannel segment index} {
-    puts $outChannel "command: push segment $segment index $index"
+# ==========================================
+# פונקציות עזר - פקודות גישה לזיכרון
+# ==========================================
+proc handlePush {outFile segment index} {
+    puts $outFile "command: push segment $segment index $index"
 }
 
-proc handlePop {outChannel segment index} {
-    puts $outChannel "command: pop segment $segment index $index"
+proc handlePop {outFile segment index} {
+    puts $outFile "command: pop segment $segment index $index"
 }
 
-# --- Main Logic ---
+# ==========================================
+# התוכנית הראשית
+# ==========================================
 
-# 1. Get directory path from user [cite: 80]
+# 1. קבלת קלט מהמשתמש
 puts -nonewline "Please enter the directory path: "
 flush stdout
 gets stdin dir_path
@@ -60,48 +66,64 @@ gets stdin dir_path
 # Clean up path to avoid trailing slashes issues
 set clean_dir_path [string trimright $dir_path "/\\"]
 
-# 2. Extract folder name and create .asm file [cite: 83, 84]
-set folderName [file tail $dirPath]
-set outputFileName [file join $dirPath "$folderName.asm"]
-set outChannel [open $outputFileName w] [cite: 85]
+# המרת הנתיב לפורמט סטנדרטי (פותר בעיות של לוכסנים הפוכים בווינדוס)
+set dirPath [file normalize $dirPath]
 
-# 3. Iterate through all .vm files in directory [cite: 86]
+# 2. חילוץ שם התיקייה ויצירת קובץ הפלט
+set dirName [file tail $dirPath]
+set asmFileName "${dirName}.asm"
+set outFilePath [file join $dirPath $asmFileName]
+
+# פתיחת קובץ הפלט לכתיבה
+set outFile [open $outFilePath w]
+
+# הגדרת משתנה גלובאלי לשמירת שם הקובץ הנוכחי (ללא סיומת)
+global currentFileName
+
+# 3. מעבר על כל קבצי ה-VM בתיקייה
 set vmFiles [glob -nocomplain -directory $dirPath *.vm]
 
 foreach vmFile $vmFiles {
-    # Define logical counter and reset it [cite: 88]
+    # איפוס מונה לוגי עבור הקובץ הנוכחי
     set logicalCounter 0
     
-    # Store filename globally without extension [cite: 89]
-    global currentFileName
+    # שמירת שם הקובץ ללא הסיומת במשתנה הגלובאלי
     set currentFileName [file rootname [file tail $vmFile]]
     
-    # Open VM file for reading [cite: 90]
-    set inChannel [open $vmFile r] [cite: 91]
+    # פתיחת קובץ הקלט לקריאה
+    set inFile [open $vmFile r]
     
-    while {[gets $inChannel line] >= 0} {
-        # Trim and split line into words [cite: 93]
+    # קריאת הקובץ שורה אחר שורה
+    while {[gets $inFile line] >= 0} {
+        # ניקוי רווחים מיותרים והתעלמות משורות ריקות
+        set line [string trim $line]
+        if {$line eq ""} continue
+        
+        # פירוק השורה למילים
         set words [regexp -all -inline {\S+} $line]
-        if {[llength $words] == 0} continue
+        set command [lindex $words 0]
         
-        set cmd [lindex $words 0]
-        
-        # 4. Route to helper functions [cite: 94]
-        switch $cmd {
-            "add" { handleAdd $outChannel }
-            "sub" { handleSub $outChannel }
-            "neg" { handleNeg $outChannel }
-            "eq"  { handleEq $outChannel logicalCounter }
-            "gt"  { handleGt $outChannel logicalCounter }
-            "lt"  { handleLt $outChannel logicalCounter }
-            "push" { handlePush $outChannel [lindex $words 1] [lindex $words 2] }
-            "pop"  { handlePop $outChannel [lindex $words 1] [lindex $words 2] }
+        # ניתוב לפונקציית העזר המתאימה
+        switch -exact -- $command {
+            "add"  { handleAdd $outFile }
+            "sub"  { handleSub $outFile }
+            "neg"  { handleNeg $outFile }
+            "eq"   { handleEq $outFile logicalCounter }
+            "gt"   { handleGt $outFile logicalCounter }
+            "lt"   { handleLt $outFile logicalCounter }
+            "push" { handlePush $outFile [lindex $words 1] [lindex $words 2] }
+            "pop"  { handlePop $outFile [lindex $words 1] [lindex $words 2] }
+            default {
+                # ניתן להוסיף טיפול בפקודות אחרות במידה ויהיו בהמשך
+            }
         }
     }
     
-    close $inChannel [cite: 99]
-    puts "End of input file: [file tail $vmFile]" [cite: 100, 101]
+    # סגירת קובץ הקלט והדפסת הודעה מתאימה
+    close $inFile
+    puts "End of input file:  [file tail $vmFile]"
 }
 
-close $outChannel
-puts "Output file is ready: $folderName.asm" [cite: 104, 105]
+# 4. סיום התוכנית - סגירת קובץ הפלט והדפסת הודעת סיום
+close $outFile
+puts "Output file is ready: $asmFileName"
