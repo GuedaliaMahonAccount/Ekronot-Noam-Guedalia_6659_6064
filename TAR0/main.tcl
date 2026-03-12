@@ -1,97 +1,139 @@
-# --- Helper Functions for Commands --- [cite: 95]
+# Global variables for the current file name, output file pointer, and logical command counter
+set current_file_name ""
+set logical_counter 0
+set out_fp ""
 
-proc handleAdd {outChannel} {
-    puts $outChannel "command: add"
+# --- Helper Functions ---
+
+# Handle arithmetic and memory commands
+proc handleAdd {} {
+    global out_fp
+    puts $out_fp "command: add"
 }
 
-proc handleSub {outChannel} {
-    puts $outChannel "command: sub"
+proc handleSub {} {
+    global out_fp
+    puts $out_fp "command: sub"
 }
 
-proc handleNeg {outChannel} {
-    puts $outChannel "command: neg"
+proc handlNeg {} {
+    global out_fp
+    puts $out_fp "command: neg"
 }
 
-# Logical commands include a counter 
-proc handleEq {outChannel counterVar} {
-    upvar $counterVar c
-    puts $outChannel "command: eq"
-    puts $outChannel "counter: $c"
-    set c [expr $c + 1]
+# Handle logical commands (includes counter increment)
+proc handleEq {} {
+    global out_fp logical_counter
+    puts $out_fp "command: eq"
+    incr logical_counter
+    puts $out_fp "counter: $logical_counter"
 }
 
-proc handleGt {outChannel counterVar} {
-    upvar $counterVar c
-    puts $outChannel "command: gt"
-    puts $outChannel "counter: $c"
-    set c [expr $c + 1]
+proc handleGt {} {
+    global out_fp logical_counter
+    puts $out_fp "command: gt"
+    incr logical_counter
+    puts $out_fp "counter: $logical_counter"
 }
 
-proc handleLt {outChannel counterVar} {
-    upvar $counterVar c
-    puts $outChannel "command: lt"
-    puts $outChannel "counter: $c"
-    set c [expr $c + 1]
+proc handleLt {} {
+    global out_fp logical_counter
+    puts $out_fp "command: lt"
+    incr logical_counter
+    puts $out_fp "counter: $logical_counter"
 }
 
-# Memory access commands with parameters 
-proc handlePush {outChannel segment index} {
-    puts $outChannel "command: push segment $segment index $index"
+# Handle memory access commands (requires segment and index)
+proc handlePush {segment index} {
+    global out_fp
+    puts $out_fp "command: push segment $segment index $index"
 }
 
-proc handlePop {outChannel segment index} {
-    puts $outChannel "command: pop segment $segment index $index"
+proc handlePop {segment index} {
+    global out_fp
+    puts $out_fp "command: pop segment $segment index $index"
 }
 
-# --- Main Logic ---
+# --- Main Program ---
 
-# 1. Get directory path from user [cite: 80]
-puts -nonewline "Please enter the directory path: "
+# 1. Get directory path from the user
+puts -nonewline "Enter directory path: "
 flush stdout
-set dirPath [gets stdin]
+gets stdin dir_path
 
-# 2. Extract folder name and create .asm file [cite: 83, 84]
-set folderName [file tail $dirPath]
-set outputFileName [file join $dirPath "$folderName.asm"]
-set outChannel [open $outputFileName w] [cite: 85]
+# Clean up path to avoid trailing slashes issues
+set clean_dir_path [string trimright $dir_path "/\\"]
 
-# 3. Iterate through all .vm files in directory [cite: 86]
-set vmFiles [glob -nocomplain -directory $dirPath *.vm]
+# 2. Extract the last directory name to create the .asm output file
+set dir_name [file tail $clean_dir_path]
+set out_file_name "${dir_name}.asm"
 
-foreach vmFile $vmFiles {
-    # Define logical counter and reset it [cite: 88]
-    set logicalCounter 0
+# Open the output file for writing (created in the current working directory)
+set out_fp [open $out_file_name w]
+
+# 3. Find all .vm files in the given directory
+set vm_files [glob -nocomplain -directory $clean_dir_path *.vm]
+
+# 4. Iterate over each .vm input file
+foreach vm_file $vm_files {
+    # Reset logical command counter for the new file
+    set logical_counter 0
     
-    # Store filename globally without extension [cite: 89]
-    global currentFileName
-    set currentFileName [file rootname [file tail $vmFile]]
+    # Extract file name with and without the .vm extension
+    set file_tail [file tail $vm_file]
+    set current_file_name [file rootname $file_tail]
     
-    # Open VM file for reading [cite: 90]
-    set inChannel [open $vmFile r] [cite: 91]
+    # Open the input file for reading
+    set in_fp [open $vm_file r]
     
-    while {[gets $inChannel line] >= 0} {
-        # Trim and split line into words [cite: 93]
-        set words [regexp -all -inline {\S+} $line]
-        if {[llength $words] == 0} continue
+    # Read the file line by line
+    while {[gets $in_fp line] >= 0} {
+        # Trim leading/trailing whitespaces
+        set line [string trim $line]
         
+        # Skip empty lines
+        if {$line eq ""} {
+            continue
+        }
+        
+        # Split the line into words
+        set words [split $line " \t"]
+        
+        # Remove empty elements caused by multiple spaces
+        set words [lsearch -all -inline -not -exact $words {}]
+        
+        # Identify the command and call the appropriate helper function
         set cmd [lindex $words 0]
         
-        # 4. Route to helper functions [cite: 94]
-        switch $cmd {
-            "add" { handleAdd $outChannel }
-            "sub" { handleSub $outChannel }
-            "neg" { handleNeg $outChannel }
-            "eq"  { handleEq $outChannel logicalCounter }
-            "gt"  { handleGt $outChannel logicalCounter }
-            "lt"  { handleLt $outChannel logicalCounter }
-            "push" { handlePush $outChannel [lindex $words 1] [lindex $words 2] }
-            "pop"  { handlePop $outChannel [lindex $words 1] [lindex $words 2] }
+        switch -exact -- $cmd {
+            "add" { handleAdd }
+            "sub" { handleSub }
+            "neg" { handlNeg }
+            "eq"  { handleEq }
+            "gt"  { handleGt }
+            "lt"  { handleLt }
+            "push" {
+                set segment [lindex $words 1]
+                set index [lindex $words 2]
+                handlePush $segment $index
+            }
+            "pop" {
+                set segment [lindex $words 1]
+                set index [lindex $words 2]
+                handlePop $segment $index
+            }
         }
     }
     
-    close $inChannel [cite: 99]
-    puts "End of input file: [file tail $vmFile]" [cite: 100, 101]
+    # Close the input file
+    close $in_fp
+    
+    # Print end of input file message to the screen
+    puts "End of input file: $file_tail"
 }
 
-close $outChannel
-puts "Output file is ready: $folderName.asm" [cite: 104, 105]
+# 5. Close the output file
+close $out_fp
+
+# Print end of processing message to the screen
+puts "Output file is ready: $out_file_name"
