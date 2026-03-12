@@ -61,10 +61,7 @@ proc handlePop {outFile segment index} {
 # 1. קבלת קלט מהמשתמש
 puts -nonewline "Please enter the directory path: "
 flush stdout
-gets stdin dir_path
-
-# Clean up path to avoid trailing slashes issues
-set clean_dir_path [string trimright $dir_path "/\\"]
+set dirPath [gets stdin]
 
 # המרת הנתיב לפורמט סטנדרטי (פותר בעיות של לוכסנים הפוכים בווינדוס)
 set dirPath [file normalize $dirPath]
