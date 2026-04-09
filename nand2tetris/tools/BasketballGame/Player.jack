@@ -1,0 +1,64 @@
+/**
+ * Implements the Player (a simple rectangle).
+ */
+class Player {
+    field int x, y; // screen location of the player's top-left corner
+    field int width, height; // width and height of the player
+
+    /** Constructs a new player with a given location and size. */
+    constructor Player new(int Ax, int Ay, int Awidth, int Aheight) {
+        let x = Ax;
+        let y = Ay;
+        let width = Awidth;
+        let height = Aheight;
+        do draw();
+        return this;
+    }
+
+    /** Disposes this player. */
+    method void dispose() {
+        do Memory.deAlloc(this);
+        return;
+    }
+
+    /** Draws the player on the screen. */
+    method void draw() {
+        do Screen.setColor(true);
+        do Screen.drawRectangle(x, y, x + width, y + height);
+        return;
+    }
+
+    /** Erases the player from the screen. */
+    method void erase() {
+        do Screen.setColor(false);
+        do Screen.drawRectangle(x, y, x + width, y + height);
+        return;
+    }
+
+    /** Moves the player left by 4 pixels. */
+    method void moveLeft() {
+        if (x > 0) {
+            do erase();
+            let x = x - 4;
+            if (x < 0) { let x = 0; }
+            do draw();
+        }
+        return;
+    }
+
+    /** Moves the player right by 4 pixels. */
+    method void moveRight() {
+        if ((x + width) < 511) {
+            do erase();
+            let x = x + 4;
+            if ((x + width) > 511) { let x = 511 - width; }
+            do draw();
+        }
+        return;
+    }
+    
+    /** Accessors */
+    method int getX() { return x; }
+    method int getY() { return y; }
+    method int getWidth() { return width; }
+}

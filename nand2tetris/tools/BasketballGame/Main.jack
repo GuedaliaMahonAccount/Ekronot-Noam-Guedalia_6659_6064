@@ -1,0 +1,13 @@
+/**
+ * The Main class initializes and starts the Basketball game.
+ */
+class Main {
+    /** Initializes a new game and starts it. */
+    function void main() {
+        var BasketballGame game;
+        let game = BasketballGame.new();
+        do game.run();
+        do game.dispose();
+        return;
+    }
+}

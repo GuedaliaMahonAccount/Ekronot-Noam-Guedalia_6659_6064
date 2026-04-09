@@ -1,0 +1,87 @@
+/**
+ * Implements the Ball.
+ */
+class Ball {
+    field int x, y; // screen location of the ball's center
+    field int radius; // radius of the ball
+    field boolean isShooting; // true if the ball is currently in the air
+
+    /** Constructs a new ball with a given location and radius. */
+    constructor Ball new(int Ax, int Ay, int Aradius) {
+        let x = Ax;
+        let y = Ay;
+        let radius = Aradius;
+        let isShooting = false;
+        return this;
+    }
+
+    /** Disposes this ball. */
+    method void dispose() {
+        do Memory.deAlloc(this);
+        return;
+    }
+
+    /** Draws the ball on the screen. */
+    method void draw() {
+        if ((x - radius) < 0) { let x = radius; }
+        if ((x + radius) > 511) { let x = 511 - radius; }
+        if ((y - radius) < 0) { let y = radius; }
+        if ((y + radius) > 255) { let y = 255 - radius; }
+        
+        do Screen.setColor(true);
+        do Screen.drawCircle(x, y, radius);
+        return;
+    }
+
+    /** Erases the ball from the screen. */
+    method void erase() {
+        if ((x - radius) < 0) { let x = radius; }
+        if ((x + radius) > 511) { let x = 511 - radius; }
+        if ((y - radius) < 0) { let y = radius; }
+        if ((y + radius) > 255) { let y = 255 - radius; }
+
+        do Screen.setColor(false);
+        do Screen.drawCircle(x, y, radius);
+        return;
+    }
+
+    /** Moves the ball up by a fixed amount. */
+    method void moveUp() {
+        if (y > 20) {
+            do erase();
+            let y = y - 4;
+            do draw();
+        } else {
+            // Reached top without scoring
+            let isShooting = false;
+            do erase();
+        }
+        return;
+    }
+    
+    /** Starts shooting the ball from the given position. */
+    method void shoot(int startX, int startY) {
+        let x = startX;
+        let y = startY;
+        let isShooting = true;
+        do draw();
+        return;
+    }
+
+    /** Returns true if the ball is currently shooting. */
+    method boolean getIsShooting() {
+        return isShooting;
+    }
+    
+    /** Stops the ball. */
+    method void stop() {
+        let isShooting = false;
+        do erase();
+        return;
+    }
+
+    /** Accessors */
+    method int getX() { return x; }
+    method int getY() { return y; }
+    method int getRadius() { return radius; }
+}

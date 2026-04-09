@@ -1,0 +1,144 @@
+/**
+ * Represents a sequence of basketball game plays.
+ */
+class BasketballGame {
+    field Player player;
+    field Ball ball;
+    
+    field int hoopX, hoopY;
+    field int hoopWidth, hoopHeight;
+    field int hoopDirection; // 1 for right, -1 for left
+    
+    field int score;
+    field boolean exit;
+
+    /** Constructs a new Basketball Game. */
+    constructor BasketballGame new() {
+        // Player is at the bottom center of the screen
+        let player = Player.new(240, 230, 30, 10);
+        let ball = Ball.new(0, 0, 4); // Created but not shooting initially
+        
+        let hoopWidth = 40;
+        let hoopHeight = 10;
+        let hoopX = 236;
+        let hoopY = 30;
+        let hoopDirection = 1;
+        
+        let score = 0;
+        let exit = false;
+        
+        do drawHoop();
+        do updateScoreDisplay();
+
+        return this;
+    }
+
+    /** Disposes this game. */
+    method void dispose() {
+        do player.dispose();
+        do ball.dispose();
+        do Memory.deAlloc(this);
+        return;
+    }
+    
+    /** Updates the score display. */
+    method void updateScoreDisplay() {
+        do Output.moveCursor(0, 0);
+        do Output.printString("Score: ");
+        do Output.printInt(score);
+        return;
+    }
+    
+    /** Draws the hoop. */
+    method void drawHoop() {
+        do Screen.setColor(true);
+        do Screen.drawRectangle(hoopX, hoopY, hoopX + hoopWidth, hoopY + hoopHeight);
+        return;
+    }
+    
+    /** Erases the hoop. */
+    method void eraseHoop() {
+        do Screen.setColor(false);
+        do Screen.drawRectangle(hoopX, hoopY, hoopX + hoopWidth, hoopY + hoopHeight);
+        return;
+    }
+    
+    /** Moves the hoop left and right continuously. */
+    method void moveHoop() {
+        do eraseHoop();
+        
+        if (hoopDirection = 1) {
+            let hoopX = hoopX + 3;
+            if ((hoopX + hoopWidth) > 511) {
+                let hoopX = 511 - hoopWidth;
+                let hoopDirection = -1;
+            }
+        } else {
+            let hoopX = hoopX - 3;
+            if (hoopX < 0) {
+                let hoopX = 0;
+                let hoopDirection = 1;
+            }
+        }
+        
+        do drawHoop();
+        return;
+    }
+    
+    /** Checks collision between ball and hoop. */
+    method void checkCollision() {
+        var int bx, by, br;
+        
+        if (~ball.getIsShooting()) { return; }
+        
+        let bx = ball.getX();
+        let by = ball.getY();
+        let br = ball.getRadius();
+        
+        // Simple bounding box collision
+        if ((by - br) < (hoopY + hoopHeight)) {
+            if ((bx > hoopX) & (bx < (hoopX + hoopWidth))) {
+                // Score!
+                let score = score + 1;
+                do updateScoreDisplay();
+                do ball.stop();
+            }
+        }
+        return;
+    }
+
+    /** Runs the game: handles the user's inputs and moves the player accordingly. */
+    method void run() {
+        var char key;  // the key currently pressed by the user
+        var int loopCount;
+        let loopCount = 0;
+
+        while (~exit) {
+            // wait for a key to be pressed
+            let key = Keyboard.keyPressed();
+
+            if (key = 81)  { let exit = true; }   // q key
+            if (key = 130) { do player.moveLeft(); }  // left arrow
+            if (key = 132) { do player.moveRight(); } // right arrow
+            if (key = 32)  { // space key
+                if (~ball.getIsShooting()) {
+                    do ball.shoot(player.getX() + (player.getWidth() / 2), player.getY() - 5);
+                }
+            }
+            
+            // Move hoop and ball at a controlled rate
+            let loopCount = loopCount + 1;
+            if (loopCount = 10) {
+                do moveHoop();
+                if (ball.getIsShooting()) {
+                    do ball.moveUp();
+                    do checkCollision();
+                }
+                let loopCount = 0;
+            }
+            
+            do Sys.wait(5); // delays the next movement
+        }
+        return;
+    }
+}

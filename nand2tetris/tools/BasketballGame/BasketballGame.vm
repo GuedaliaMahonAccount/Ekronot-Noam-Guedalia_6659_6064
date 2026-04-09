@@ -1,0 +1,335 @@
+function BasketballGame.new 0
+push constant 9
+call Memory.alloc 1
+pop pointer 0
+push constant 240
+push constant 230
+push constant 30
+push constant 10
+call Player.new 4
+pop this 0
+push constant 0
+push constant 0
+push constant 4
+call Ball.new 3
+pop this 1
+push constant 40
+pop this 4
+push constant 10
+pop this 5
+push constant 236
+pop this 2
+push constant 30
+pop this 3
+push constant 1
+pop this 6
+push constant 0
+pop this 7
+push constant 0
+pop this 8
+push pointer 0
+call BasketballGame.drawHoop 1
+pop temp 0
+push pointer 0
+call BasketballGame.updateScoreDisplay 1
+pop temp 0
+push pointer 0
+return
+function BasketballGame.dispose 0
+push argument 0
+pop pointer 0
+push this 0
+call Player.dispose 1
+pop temp 0
+push this 1
+call Ball.dispose 1
+pop temp 0
+push pointer 0
+call Memory.deAlloc 1
+pop temp 0
+push constant 0
+return
+function BasketballGame.updateScoreDisplay 0
+push argument 0
+pop pointer 0
+push constant 0
+push constant 0
+call Output.moveCursor 2
+pop temp 0
+push constant 7
+call String.new 1
+push constant 83
+call String.appendChar 2
+push constant 99
+call String.appendChar 2
+push constant 111
+call String.appendChar 2
+push constant 114
+call String.appendChar 2
+push constant 101
+call String.appendChar 2
+push constant 58
+call String.appendChar 2
+push constant 32
+call String.appendChar 2
+call Output.printString 1
+pop temp 0
+push this 7
+call Output.printInt 1
+pop temp 0
+push constant 0
+return
+function BasketballGame.drawHoop 0
+push argument 0
+pop pointer 0
+push constant 0
+not
+call Screen.setColor 1
+pop temp 0
+push this 2
+push this 3
+push this 2
+push this 4
+add
+push this 3
+push this 5
+add
+call Screen.drawRectangle 4
+pop temp 0
+push constant 0
+return
+function BasketballGame.eraseHoop 0
+push argument 0
+pop pointer 0
+push constant 0
+call Screen.setColor 1
+pop temp 0
+push this 2
+push this 3
+push this 2
+push this 4
+add
+push this 3
+push this 5
+add
+call Screen.drawRectangle 4
+pop temp 0
+push constant 0
+return
+function BasketballGame.moveHoop 0
+push argument 0
+pop pointer 0
+push pointer 0
+call BasketballGame.eraseHoop 1
+pop temp 0
+push this 6
+push constant 1
+eq
+if-goto IF_TRUE0
+goto IF_FALSE0
+label IF_TRUE0
+push this 2
+push constant 3
+add
+pop this 2
+push this 2
+push this 4
+add
+push constant 511
+gt
+if-goto IF_TRUE1
+goto IF_FALSE1
+label IF_TRUE1
+push constant 511
+push this 4
+sub
+pop this 2
+push constant 1
+neg
+pop this 6
+label IF_FALSE1
+goto IF_END0
+label IF_FALSE0
+push this 2
+push constant 3
+sub
+pop this 2
+push this 2
+push constant 0
+lt
+if-goto IF_TRUE2
+goto IF_FALSE2
+label IF_TRUE2
+push constant 0
+pop this 2
+push constant 1
+pop this 6
+label IF_FALSE2
+label IF_END0
+push pointer 0
+call BasketballGame.drawHoop 1
+pop temp 0
+push constant 0
+return
+function BasketballGame.checkCollision 3
+push argument 0
+pop pointer 0
+push this 1
+call Ball.getIsShooting 1
+not
+if-goto IF_TRUE0
+goto IF_FALSE0
+label IF_TRUE0
+push constant 0
+return
+label IF_FALSE0
+push this 1
+call Ball.getX 1
+pop local 0
+push this 1
+call Ball.getY 1
+pop local 1
+push this 1
+call Ball.getRadius 1
+pop local 2
+push local 1
+push local 2
+sub
+push this 3
+push this 5
+add
+lt
+if-goto IF_TRUE1
+goto IF_FALSE1
+label IF_TRUE1
+push local 0
+push this 2
+gt
+push local 0
+push this 2
+push this 4
+add
+lt
+and
+if-goto IF_TRUE2
+goto IF_FALSE2
+label IF_TRUE2
+push this 7
+push constant 1
+add
+pop this 7
+push pointer 0
+call BasketballGame.updateScoreDisplay 1
+pop temp 0
+push this 1
+call Ball.stop 1
+pop temp 0
+label IF_FALSE2
+label IF_FALSE1
+push constant 0
+return
+function BasketballGame.run 2
+push argument 0
+pop pointer 0
+push constant 0
+pop local 1
+label WHILE_EXP0
+push this 8
+not
+not
+if-goto WHILE_END0
+call Keyboard.keyPressed 0
+pop local 0
+push local 0
+push constant 81
+eq
+if-goto IF_TRUE0
+goto IF_FALSE0
+label IF_TRUE0
+push constant 0
+not
+pop this 8
+label IF_FALSE0
+push local 0
+push constant 130
+eq
+if-goto IF_TRUE1
+goto IF_FALSE1
+label IF_TRUE1
+push this 0
+call Player.moveLeft 1
+pop temp 0
+label IF_FALSE1
+push local 0
+push constant 132
+eq
+if-goto IF_TRUE2
+goto IF_FALSE2
+label IF_TRUE2
+push this 0
+call Player.moveRight 1
+pop temp 0
+label IF_FALSE2
+push local 0
+push constant 32
+eq
+if-goto IF_TRUE3
+goto IF_FALSE3
+label IF_TRUE3
+push this 1
+call Ball.getIsShooting 1
+not
+if-goto IF_TRUE4
+goto IF_FALSE4
+label IF_TRUE4
+push this 1
+push this 0
+call Player.getX 1
+push this 0
+call Player.getWidth 1
+push constant 2
+call Math.divide 2
+add
+push this 0
+call Player.getY 1
+push constant 5
+sub
+call Ball.shoot 3
+pop temp 0
+label IF_FALSE4
+label IF_FALSE3
+push local 1
+push constant 1
+add
+pop local 1
+push local 1
+push constant 10
+eq
+if-goto IF_TRUE5
+goto IF_FALSE5
+label IF_TRUE5
+push pointer 0
+call BasketballGame.moveHoop 1
+pop temp 0
+push this 1
+call Ball.getIsShooting 1
+if-goto IF_TRUE6
+goto IF_FALSE6
+label IF_TRUE6
+push this 1
+call Ball.moveUp 1
+pop temp 0
+push pointer 0
+call BasketballGame.checkCollision 1
+pop temp 0
+label IF_FALSE6
+push constant 0
+pop local 1
+label IF_FALSE5
+push constant 5
+call Sys.wait 1
+pop temp 0
+goto WHILE_EXP0
+label WHILE_END0
+push constant 0
+return
