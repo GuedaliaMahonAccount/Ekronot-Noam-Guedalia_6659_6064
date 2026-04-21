@@ -1,4 +1,4 @@
-package provide CompilationEngine 1.0
+﻿package provide CompilationEngine 1.0
 
 oo::class create CompilationEngine {
     variable tokenizer
@@ -8,15 +8,14 @@ oo::class create CompilationEngine {
     variable labelCounter
 
     constructor {jackTokenizer outFilename} {
-        set tokenizer $jackTokenizer
-        set vmWriter [VMWriter new $outFilename]
+        set tokenizer 
+        set vmWriter [VMWriter new ]
         set symbolTable [SymbolTable new]
         set labelCounter 0
     }
 
-    # Helper function to map symbol table kinds to VM segments
     method getSegment {kind} {
-        switch -exact -- $kind {
+        switch -exact --  {
             "field" {return "this"}
             "var"   {return "local"}
             "arg"   {return "argument"}
@@ -26,221 +25,428 @@ oo::class create CompilationEngine {
     }
 
     method compileClass {} {
-        # Advance tokenizer and get class name
-        # ...
-        # Loop through classVarDec and subroutineDec
+         advance
+        set className [ identifier]
+         advance
+         advance
+
+        while {[ tokenType] eq "KEYWORD" && ([ keyword] eq "STATIC" || [ keyword] eq "FIELD")} {
+            my compileClassVarDec
+        }
+
+        while {[ tokenType] eq "KEYWORD" && ([ keyword] eq "CONSTRUCTOR" || [ keyword] eq "FUNCTION" || [ keyword] eq "METHOD")} {
+            my compileSubroutine
+        }
+         advance
+    }
+
+    method compileClassVarDec {} {
+        set kind [ keyword]
+         advance
+        
+        if {[ tokenType] eq "KEYWORD"} {
+            set type [ keyword]
+        } else {
+            set type [ identifier]
+        }
+         advance
+        
+        set name [ identifier]
+         define   
+         advance
+        
+        while {[ tokenType] eq "SYMBOL" && [ symbol] eq ","} {
+             advance
+            set name [ identifier]
+             define   
+             advance
+        }
+         advance
+    }
+
+    method compileSubroutine {} {
+         startSubroutine
+        set subroutineType [ keyword]
+         advance
+        
+        if {[ tokenType] eq "KEYWORD"} {
+            set returnType [ keyword]
+        } else {
+            set returnType [ identifier]
+        }
+         advance
+        
+        set subroutineName [ identifier]
+         advance
+        
+        if { eq "METHOD"} {
+             define "this"  "arg"
+        }
+        
+         advance
+        my compileParameterList
+         advance
+        
+         advance
+        
+        while {[ tokenType] eq "KEYWORD" && [ keyword] eq "VAR"} {
+            my compileVarDec
+        }
+        
+        set nLocals [ varCount "var"]
+         writeFunction "." 
+        
+        if { eq "CONSTRUCTOR"} {
+            set nFields [ varCount "field"]
+             writePush "constant" 
+             writeCall "Memory.alloc" 1
+             writePop "pointer" 0
+        } elseif { eq "METHOD"} {
+             writePush "argument" 0
+             writePop "pointer" 0
+        }
+        
+        my compileStatements
+         advance
+    }
+
+    method compileParameterList {} {
+        if {[ tokenType] ne "SYMBOL" || [ symbol] ne ")"} {
+            if {[ tokenType] eq "KEYWORD"} {
+                set type [ keyword]
+            } else {
+                set type [ identifier]
+            }
+             advance
+            
+            set name [ identifier]
+             define   "arg"
+             advance
+            
+            while {[ tokenType] eq "SYMBOL" && [ symbol] eq ","} {
+                 advance
+                if {[ tokenType] eq "KEYWORD"} {
+                    set type [ keyword]
+                } else {
+                    set type [ identifier]
+                }
+                 advance
+                
+                set name [ identifier]
+                 define   "arg"
+                 advance
+            }
+        }
+    }
+
+    method compileVarDec {} {
+        set kind "var"
+         advance
+        
+        if {[ tokenType] eq "KEYWORD"} {
+            set type [ keyword]
+        } else {
+            set type [ identifier]
+        }
+         advance
+        
+        set name [ identifier]
+         define   
+         advance
+        
+        while {[ tokenType] eq "SYMBOL" && [ symbol] eq ","} {
+             advance
+            set name [ identifier]
+             define   
+             advance
+        }
+         advance
+    }
+
+    method compileStatements {} {
+        while {[ tokenType] eq "KEYWORD"} {
+            set kw [ keyword]
+            switch -exact --  {
+                "LET" { my compileLet }
+                "IF" { my compileIf }
+                "WHILE" { my compileWhile }
+                "DO" { my compileDo }
+                "RETURN" { my compileReturn }
+                default { break }
+            }
+        }
+    }
+
+    method compileDo {} {
+         advance
+        set name [ identifier]
+         advance
+        
+        set nArgs 0
+        set callName ""
+        
+        if {[ tokenType] eq "SYMBOL" && [ symbol] eq "."} {
+             advance
+            set subName [ identifier]
+             advance
+            
+            set kind [ kindOf ]
+            set type [ typeOf ]
+            
+            if { ne "NONE"} {
+                 writePush [my getSegment ] [ indexOf ]
+                set callName "."
+                set nArgs 1
+            } else {
+                set callName "."
+            }
+        } else {
+             writePush "pointer" 0
+            set callName "."
+            set nArgs 1
+        }
+        
+         advance
+        set nArgs [expr { + [my compileExpressionList]}]
+         advance
+         advance
+        
+         writeCall  
+         writePop "temp" 0
     }
 
     method compileLet {} {
-        # Process the 'let' keyword
-        $tokenizer advance
+         advance
+        set varName [ identifier]
+         advance
         
-        # Get variable name
-        set varName [$tokenizer identifier]
-        $tokenizer advance
-        
-        # Check for array access e.g., let a[i] = ...
         set isArray 0
-        if {[$tokenizer symbol] eq "\["} {
+        if {[ tokenType] eq "SYMBOL" && [ symbol] eq "\["} {
             set isArray 1
-            # Compile the index expression
-            # ...
+             advance
+            my compileExpression
+             advance
+            
+            set kind [ kindOf ]
+            set index [ indexOf ]
+             writePush [my getSegment ] 
+             writeArithmetic "add"
         }
-
-        # Expect '='
-        $tokenizer advance
-
-        # Compile the expression on the right side
+        
+         advance
         my compileExpression
-
-        # Expect ';'
-        $tokenizer advance
-
-        # Assign value to the variable via VM commands
-        if {$isArray} {
-            # Logic for array assignment (pop temp 0, pop pointer 1, push temp 0, pop that 0)
+         advance
+        
+        if {} {
+             writePop "temp" 0
+             writePop "pointer" 1
+             writePush "temp" 0
+             writePop "that" 0
         } else {
-            set kind [$symbolTable kindOf $varName]
-            set index [$symbolTable indexOf $varName]
-            set segment [my getSegment $kind]
-            $vmWriter writePop $segment $index
+            set kind [ kindOf ]
+            set index [ indexOf ]
+             writePop [my getSegment ] 
+        }
+    }
+
+    method compileWhile {} {
+        set labelNum 
+        incr labelCounter
+        set lblExp "WHILE_EXP"
+        set lblEnd "WHILE_END"
+        
+         writeLabel 
+         advance
+         advance
+        my compileExpression
+         advance
+        
+         writeArithmetic "not"
+         writeIf 
+        
+         advance
+        my compileStatements
+         advance
+        
+         writeGoto 
+         writeLabel 
+    }
+
+    method compileReturn {} {
+         advance
+        if {[ tokenType] ne "SYMBOL" || [ symbol] ne ";"} {
+            my compileExpression
+        } else {
+             writePush "constant" 0
+        }
+         advance
+         writeReturn
+    }
+
+    method compileIf {} {
+        set labelNum 
+        incr labelCounter
+        set lblTrue "IF_TRUE"
+        set lblFalse "IF_FALSE"
+        set lblEnd "IF_END"
+        
+         advance
+         advance
+        my compileExpression
+         advance
+        
+         writeIf 
+         writeGoto 
+         writeLabel 
+        
+         advance
+        my compileStatements
+         advance
+        
+        if {[ tokenType] eq "KEYWORD" && [ keyword] eq "ELSE"} {
+             writeGoto 
+             writeLabel 
+             advance
+             advance
+            my compileStatements
+             advance
+             writeLabel 
+        } else {
+             writeLabel 
         }
     }
 
     method compileExpression {} {
-        # Compile term
         my compileTerm
+        
+        while {[ tokenType] eq "SYMBOL" && [ symbol] in {"+" "-" "*" "/" "&" "|" "<" ">" "="}} {
+            set op [ symbol]
+             advance
+            my compileTerm
+            
+            switch -exact --  {
+                "+" {  writeArithmetic "add" }
+                "-" {  writeArithmetic "sub" }
+                "*" {  writeCall "Math.multiply" 2 }
+                "/" {  writeCall "Math.divide" 2 }
+                "&" {  writeArithmetic "and" }
+                "|" {  writeArithmetic "or" }
+                "<" {  writeArithmetic "lt" }
+                ">" {  writeArithmetic "gt" }
+                "=" {  writeArithmetic "eq" }
+            }
+        }
+    }
 
-        # Loop while there is an operator (+, -, *, /, &, |, <, >, =)
-        # while {[$tokenizer symbol] in $operators} ...
-        #   compileTerm
-        #   writeArithmetic command based on operator
-        #   (Remember: '*' calls Math.multiply and '/' calls Math.divide)
+    method compileTerm {} {
+        set type [ tokenType]
+        
+        if { eq "INT_CONST"} {
+             writePush "constant" [ intVal]
+             advance
+        } elseif { eq "STRING_CONST"} {
+            set str [ stringVal]
+            set len [string length ]
+             writePush "constant" 
+             writeCall "String.new" 1
+            for {set i 0} { < } {incr i} {
+                scan [string index  ] %c charCode
+                 writePush "constant" 
+                 writeCall "String.appendChar" 2
+            }
+             advance
+        } elseif { eq "KEYWORD"} {
+            set kw [ keyword]
+            if { eq "TRUE"} {
+                 writePush "constant" 0
+                 writeArithmetic "not"
+            } elseif { eq "FALSE" ||  eq "NULL"} {
+                 writePush "constant" 0
+            } elseif { eq "THIS"} {
+                 writePush "pointer" 0
+            }
+             advance
+        } elseif { eq "IDENTIFIER"} {
+            set name [ identifier]
+             advance
+            
+            if {[ tokenType] eq "SYMBOL" && [ symbol] eq "\["} {
+                 advance
+                my compileExpression
+                 advance
+                
+                set kind [ kindOf ]
+                set index [ indexOf ]
+                 writePush [my getSegment ] 
+                 writeArithmetic "add"
+                 writePop "pointer" 1
+                 writePush "that" 0
+            } elseif {[ tokenType] eq "SYMBOL" && ([ symbol] eq "(" || [ symbol] eq ".")} {
+                set callName ""
+                set nArgs 0
+                
+                if {[ symbol] eq "."} {
+                     advance
+                    set subName [ identifier]
+                     advance
+                    
+                    set kind [ kindOf ]
+                    set typeName [ typeOf ]
+                    
+                    if { ne "NONE"} {
+                         writePush [my getSegment ] [ indexOf ]
+                        set callName "."
+                        set nArgs 1
+                    } else {
+                        set callName "."
+                    }
+                } else {
+                     writePush "pointer" 0
+                    set callName "."
+                    set nArgs 1
+                }
+                
+                 advance
+                set nArgs [expr { + [my compileExpressionList]}]
+                 advance
+                
+                 writeCall  
+            } else {
+                set kind [ kindOf ]
+                set index [ indexOf ]
+                 writePush [my getSegment ] 
+            }
+        } elseif { eq "SYMBOL" && [ symbol] eq "("} {
+             advance
+            my compileExpression
+             advance
+        } elseif { eq "SYMBOL" && ([ symbol] eq "-" || [ symbol] eq "~")} {
+            set op [ symbol]
+             advance
+            my compileTerm
+            if { eq "-"} {
+                 writeArithmetic "neg"
+            } else {
+                 writeArithmetic "not"
+            }
+        }
+    }
+
+    method compileExpressionList {} {
+        set nArgs 0
+        if {[ tokenType] ne "SYMBOL" || [ symbol] ne ")"} {
+            my compileExpression
+            incr nArgs
+            while {[ tokenType] eq "SYMBOL" && [ symbol] eq ","} {
+                 advance
+                my compileExpression
+                incr nArgs
+            }
+        }
+        return 
     }
 
     method close {} {
-        $vmWriter close
-    }
-
-
-    method compileIf {} {
-        # Advance past the 'if' keyword
-        $tokenizer advance
-        
-        # Expect '('
-        $tokenizer advance
-        
-        # Compile the condition expression
-        my compileExpression
-        
-        # Expect ')'
-        $tokenizer advance
-        
-        # Generate unique labels for flow control to handle nested if-statements
-        set labelTrue "IF_TRUE$labelCounter"
-        set labelFalse "IF_FALSE$labelCounter"
-        set labelEnd "IF_END$labelCounter"
-        incr labelCounter
-        
-        # Write VM commands for conditional and unconditional jumps
-        $vmWriter writeIf $labelTrue
-        $vmWriter writeGoto $labelFalse
-        $vmWriter writeLabel $labelTrue
-        
-        # Expect '{'
-        $tokenizer advance
-        
-        # Compile the statements inside the 'if' block
-        my compileStatements
-        
-        # Expect '}'
-        $tokenizer advance
-        
-        # Jump to the end of the if-structure
-        $vmWriter writeGoto $labelEnd
-        
-        # Label for the false branch
-        $vmWriter writeLabel $labelFalse
-        
-        # Check if an 'else' clause exists
-        if {[$tokenizer tokenType] eq "KEYWORD" && [$tokenizer keyword] eq "ELSE"} {
-            # Advance past 'else'
-            $tokenizer advance
-            
-            # Expect '{'
-            $tokenizer advance
-            
-            # Compile the statements inside the 'else' block
-            my compileStatements
-            
-            # Expect '}'
-            $tokenizer advance
-        }
-        
-        # Write the end label for the entire if-else structure
-        $vmWriter writeLabel $labelEnd
-    }
-
-    method compileWhile {} {
-        # Generate unique labels for the while loop
-        set labelExp "WHILE_EXP$labelCounter"
-        set labelEnd "WHILE_END$labelCounter"
-        incr labelCounter
-        
-        # Write the label for condition evaluation
-        $vmWriter writeLabel $labelExp
-        
-        # Advance past the 'while' keyword
-        $tokenizer advance
-        
-        # Expect '('
-        $tokenizer advance
-        
-        # Compile the loop condition
-        my compileExpression
-        
-        # Negate the condition (bitwise not)
-        $vmWriter writeArithmetic "not"
-        
-        # If the negated condition is true, jump to the end (exit loop)
-        $vmWriter writeIf $labelEnd
-        
-        # Expect ')'
-        $tokenizer advance
-        
-        # Expect '{'
-        $tokenizer advance
-        
-        # Compile the statements inside the loop body
-        my compileStatements
-        
-        # Expect '}'
-        $tokenizer advance
-        
-        # Jump back to evaluate the condition again
-        $vmWriter writeGoto $labelExp
-        
-        # Write the end label for loop exit
-        $vmWriter writeLabel $labelEnd
-    }
-
-    method compileDo {} {
-        # Advance past the 'do' keyword
-        $tokenizer advance
-        
-        # Extract the subroutine or class/object name
-        set identifier [$tokenizer identifier]
-        $tokenizer advance
-        
-        set nArgs 0
-        
-        # Check if it is a method call on an object or a static function call
-        if {[$tokenizer symbol] eq "."} {
-            # Advance past '.'
-            $tokenizer advance
-            
-            set subName [$tokenizer identifier]
-            $tokenizer advance
-            
-            # Look up the identifier in the symbol table
-            set type [$symbolTable typeOf $identifier]
-            
-            if {$type ne ""} {
-                # The identifier is an object. Push it as the first argument.
-                set kind [$symbolTable kindOf $identifier]
-                set index [$symbolTable indexOf $identifier]
-                
-                $vmWriter writePush [my getSegment $kind] $index
-                
-                set callName "${type}.${subName}"
-                set nArgs 1
-            } else {
-                # The identifier is a class name. This is a static function call.
-                set callName "${identifier}.${subName}"
-            }
-        } else {
-            # No '.', this is a method call on the current object ('this')
-            $vmWriter writePush "pointer" 0
-            set callName "${className}.${identifier}"
-            set nArgs 1
-        }
-        
-        # Expect '('
-        $tokenizer advance
-        
-        # Compile the expression list and add the returned count to nArgs
-        set nArgs [expr {$nArgs + [my compileExpressionList]}]
-        
-        # Expect ')'
-        $tokenizer advance
-        
-        # Expect ';'
-        $tokenizer advance
-        
-        # Write the actual VM call command
-        $vmWriter writeCall $callName $nArgs
-        
-        # Discard the return value (void functions always return 0 in VM)
-        $vmWriter writePop "temp" 0
+         close
     }
 }
