@@ -230,11 +230,11 @@ oo::class create CompilationEngine {
         set varName [my eatIdentifier]
 
         set isArray 0
-        if {[$tokenizer tokenType] eq "SYMBOL" && [$tokenizer symbol] eq "["} {
+        if {[$tokenizer tokenType] eq "SYMBOL" && [$tokenizer symbol] eq "\["} {
             set isArray 1
             $tokenizer advance
             my compileExpression
-            my eatSymbol "]"
+            my eatSymbol "\]"
             my pushVariable $varName
             $vmWriter writeArithmetic add
         }
@@ -394,10 +394,10 @@ oo::class create CompilationEngine {
             set name [$tokenizer identifier]
             $tokenizer advance
 
-            if {[$tokenizer tokenType] eq "SYMBOL" && [$tokenizer symbol] eq "["} {
+            if {[$tokenizer tokenType] eq "SYMBOL" && [$tokenizer symbol] eq "\["} {
                 $tokenizer advance
                 my compileExpression
-                my eatSymbol "]"
+                my eatSymbol "\]"
 
                 my pushVariable $name
                 $vmWriter writeArithmetic add
