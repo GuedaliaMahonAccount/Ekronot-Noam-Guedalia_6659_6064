@@ -1,6 +1,5 @@
 # JackCompiler: Top-level driver for the Jack to VM Compiler
 # Part of Project 11 - Nand2Tetris
-# Comments are in English as per requirements
 
 # Source the necessary modules
 # Ensure these files are in the same directory
